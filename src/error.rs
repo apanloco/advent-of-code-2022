@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     General(String),
     Parse(String),
@@ -28,4 +28,3 @@ impl From<std::io::Error> for Error {
         Error::Io(e.to_string())
     }
 }
-

@@ -1,14 +1,14 @@
+use crate::error::Error;
 use std::cmp::Ordering;
 use std::str::FromStr;
-use crate::error::Error;
 
 pub struct Elves {
-    pub elves: Vec<Elv>
+    pub elves: Vec<Elv>,
 }
 
 #[derive(Eq, Debug)]
 pub struct Elv {
-    pub snacks: Vec<usize>
+    pub snacks: Vec<usize>,
 }
 
 impl PartialEq<Self> for Elv {
@@ -31,9 +31,7 @@ impl PartialOrd for Elv {
 
 impl Elv {
     fn from_vec(snacks: Vec<usize>) -> Self {
-        Elv {
-            snacks
-        }
+        Elv { snacks }
     }
 
     pub fn sum(&self) -> usize {
@@ -64,9 +62,7 @@ impl FromStr for Elves {
             elves.push(Elv::from_vec(elv));
         }
 
-        Ok(Elves {
-            elves,
-        })
+        Ok(Elves { elves })
     }
 }
 
@@ -95,20 +91,21 @@ fn test() -> Result<(), Error> {
     let max_elv = elves.elves.iter().max();
     assert!(max_elv.is_some());
     let max_elv = max_elv.unwrap();
-    assert_eq!(max_elv, &Elv {
-        snacks: vec![7000, 8000, 9000],
-    });
+    assert_eq!(
+        max_elv,
+        &Elv {
+            snacks: vec![7000, 8000, 9000],
+        }
+    );
     assert_eq!(max_elv.sum(), 24000);
 
     let input = std::fs::read_to_string("input/day1")?;
-    let mut elves: Elves = input.parse()?;
+    let elves: Elves = input.parse()?;
     assert_eq!(elves.elves.iter().max().unwrap().sum(), 69883);
 
     let mut e = elves.elves;
 
     e.sort_by(|a, b| b.cmp(a));
-
-    println!("{:?}", e[0].sum() + e[1].sum() + e[2].sum());
 
     Ok(())
 }
