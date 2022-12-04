@@ -29,7 +29,7 @@ pub enum MappingKind {
 }
 
 impl Shape {
-    pub fn get_win_shape(&self, input: Shape) -> Shape {
+    pub fn win_over(&self, input: Shape) -> Shape {
         match input {
             Shape::Rock => Shape::Paper,
             Shape::Paper => Shape::Scissors,
@@ -37,7 +37,7 @@ impl Shape {
         }
     }
 
-    pub fn get_loose_shape(&self, input: Shape) -> Shape {
+    pub fn loose_over(&self, input: Shape) -> Shape {
         match input {
             Shape::Rock => Shape::Scissors,
             Shape::Paper => Shape::Rock,
@@ -45,7 +45,7 @@ impl Shape {
         }
     }
 
-    pub fn get_draw_shape(&self, input: Shape) -> Shape {
+    pub fn draw(&self, input: Shape) -> Shape {
         input
     }
 }
@@ -96,12 +96,10 @@ impl Strategy {
     pub fn from_str_with_mapping(input: &str, mapping: &HashMap<String, MappingKind>) -> Result<Self, Error> {
         let mut rounds = Vec::new();
         for line in input.trim_start().trim_end().lines() {
-            let lhs_plus_rhs: Vec<_> = line.trim_start().trim_end().split(' ').collect();
-            if lhs_plus_rhs.len() != 2 {
-                return Err(Error::General("invalid input (should be two tokens)".to_string()));
-            }
-            let lhs_token = lhs_plus_rhs[0];
-            let rhs_token = lhs_plus_rhs[1];
+            let two_tokens_error = || Error::General(format!("should be two tokens: {}", line));
+            let mut tokens = line.trim_start().trim_end().split(' ');
+            let lhs_token = tokens.next().ok_or_else(two_tokens_error)?;
+            let rhs_token = tokens.next().ok_or_else(two_tokens_error)?;
             let lhs_shape = match lhs_token {
                 "A" => Shape::Rock,
                 "B" => Shape::Paper,
@@ -110,21 +108,20 @@ impl Strategy {
             };
             let kind = mapping
                 .get(rhs_token)
-                .ok_or_else(|| Error::General(format!("mapping not found for rhs token: {}", rhs_token)))?;
+                .ok_or_else(|| Error::General(format!("no mapping for: {}", rhs_token)))?;
 
             let rhs_shape = match kind {
                 MappingKind::Shape(shape) => *shape,
                 MappingKind::Outcome(outcome) => match outcome {
-                    Outcome::Win => lhs_shape.get_win_shape(lhs_shape),
-                    Outcome::Loose => lhs_shape.get_loose_shape(lhs_shape),
-                    Outcome::Draw => lhs_shape.get_draw_shape(lhs_shape),
+                    Outcome::Win => lhs_shape.win_over(lhs_shape),
+                    Outcome::Loose => lhs_shape.loose_over(lhs_shape),
+                    Outcome::Draw => lhs_shape.draw(lhs_shape),
                 },
             };
-            let round = Round {
+            rounds.push(Round {
                 lhs: lhs_shape,
                 rhs: rhs_shape,
-            };
-            rounds.push(round);
+            });
         }
         Ok(Strategy { rounds })
     }
@@ -165,11 +162,13 @@ C Z"#;
     let total_score: usize = strategy.rounds.iter().map(|r| r.score()).sum();
     assert_eq!(total_score, 12);
 
-    let strategy: Strategy = Strategy::from_str_with_mapping(&std::fs::read_to_string("input/day2")?, &mapping_part1)?;
+    let file_contents = std::fs::read_to_string("input/day2")?;
+
+    let strategy: Strategy = Strategy::from_str_with_mapping(&file_contents, &mapping_part1)?;
     let total_score: usize = strategy.rounds.iter().map(|r| r.score()).sum();
     assert_eq!(total_score, 9651);
 
-    let strategy: Strategy = Strategy::from_str_with_mapping(&std::fs::read_to_string("input/day2")?, &mapping_part2)?;
+    let strategy: Strategy = Strategy::from_str_with_mapping(&file_contents, &mapping_part2)?;
     let total_score: usize = strategy.rounds.iter().map(|r| r.score()).sum();
     assert_eq!(total_score, 10560);
 

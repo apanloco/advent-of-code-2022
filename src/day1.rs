@@ -30,12 +30,16 @@ impl PartialOrd for Elv {
 }
 
 impl Elv {
-    fn from_vec(snacks: Vec<usize>) -> Self {
-        Elv { snacks }
+    fn new() -> Self {
+        Self { snacks: vec![] }
     }
 
     pub fn sum(&self) -> usize {
         self.snacks.iter().sum()
+    }
+
+    fn add_snack(&mut self, snack: usize) {
+        self.snacks.push(snack);
     }
 }
 
@@ -43,23 +47,15 @@ impl FromStr for Elves {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut elves = Vec::new();
-        let mut elv = Vec::new();
+        let mut elves = vec![Elv::new()];
 
         for line in s.trim_start().trim_end().lines() {
             let line = line.trim_start().trim_end();
             if line.is_empty() {
-                if !elv.is_empty() {
-                    elves.push(Elv::from_vec(elv));
-                    elv = Vec::new();
-                }
+                elves.push(Elv::new());
             } else {
-                elv.push(line.parse()?);
+                elves.last_mut().unwrap().add_snack(line.parse()?);
             }
-        }
-
-        if !elv.is_empty() {
-            elves.push(Elv::from_vec(elv));
         }
 
         Ok(Elves { elves })

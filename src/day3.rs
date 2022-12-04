@@ -1,5 +1,4 @@
 use crate::error::Error;
-use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -71,22 +70,9 @@ impl FromStr for Rucksack {
 }
 
 pub fn group_score(group: &[Rucksack]) -> Result<usize, Error> {
-    use itertools::Itertools;
-    let concat: String = group
-        .iter()
-        .map(|s| s.contents.chars().unique().collect())
-        .collect::<Vec<String>>()
-        .join("")
-        .chars()
-        .collect();
-    let counter = concat.chars().fold(HashMap::new(), |mut acc, x| {
-        let counter = acc.entry(x).or_insert(0);
-        *counter += 1;
-        acc
-    });
-    for (k, v) in counter.iter() {
-        if v == &3 {
-            return score_for_char(*k);
+    for c in group[0].contents.chars() {
+        if group[1].contents.contains(c) && group[2].contents.contains(c) {
+            return score_for_char(c);
         }
     }
     Err(Error::General("failed to find three equal chars in group".to_string()))
@@ -100,6 +86,8 @@ PmmdzqPrVvPwwTWBwg
 wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
 ttgJtRGJQctTZtZT
 CrZsJsPPZsGzwwsLwLmpwMDw"#;
+    let file_contents = std::fs::read_to_string("input/day3")?;
+
     let rucksacks: Vec<Rucksack> = input.lines().map(|l| l.parse().unwrap()).collect();
     assert_eq!(rucksacks[0].score_of_common_item().unwrap(), 16);
     assert_eq!(rucksacks[1].score_of_common_item().unwrap(), 38);
@@ -108,7 +96,7 @@ CrZsJsPPZsGzwwsLwLmpwMDw"#;
     assert_eq!(rucksacks[4].score_of_common_item().unwrap(), 20);
     let score: usize = rucksacks.iter().map(|r| r.score_of_common_item().unwrap()).sum();
     assert_eq!(score, 157);
-    let rucksacks: Vec<Rucksack> = std::fs::read_to_string("input/day3")?.lines().map(|l| l.parse().unwrap()).collect();
+    let rucksacks: Vec<Rucksack> = file_contents.lines().map(|l| l.parse().unwrap()).collect();
     let score: usize = rucksacks.iter().map(|r| r.score_of_common_item().unwrap()).sum();
     assert_eq!(score, 8298);
 
@@ -118,7 +106,7 @@ CrZsJsPPZsGzwwsLwLmpwMDw"#;
     assert_eq!(group_score(groups[0])?, 18);
     assert_eq!(group_score(groups[1])?, 52);
 
-    let rucksacks: Vec<Rucksack> = std::fs::read_to_string("input/day3")?.lines().map(|l| l.parse().unwrap()).collect();
+    let rucksacks: Vec<Rucksack> = file_contents.lines().map(|l| l.parse().unwrap()).collect();
     let groups: Vec<&[Rucksack]> = rucksacks.chunks(3).collect();
     let score: usize = groups.iter().map(|g| group_score(g).unwrap()).sum();
     assert_eq!(score, 2708);
