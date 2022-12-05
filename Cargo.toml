@@ -3,7 +3,8 @@ name = "advent-of-code-2022"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-
 [profile.release]
 debug = true
+
+[dependencies]
+text_io = "0.1"
