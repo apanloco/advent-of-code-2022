@@ -7,23 +7,15 @@ pub struct Rucksack {
 }
 
 impl Rucksack {
-    pub fn compartments(&self) -> Result<Vec<String>, Error> {
-        let compartments: Vec<String> = self
-            .contents
-            .as_bytes()
-            .chunks(self.contents.len() / 2)
-            .map(|s| std::str::from_utf8(s).unwrap().to_owned())
-            .collect();
-        if compartments.len() != 2 && compartments[0].len() != compartments[1].len() {
-            return Err(Error::General("invalid compartments".to_string()));
-        }
-        Ok(compartments)
+    pub fn compartments(&self) -> (&str, &str) {
+        let len = self.contents.len();
+        (&self.contents[0..len / 2], &self.contents[len / 2..])
     }
 
     pub fn common_item(&self) -> Result<char, Error> {
-        let compartments = self.compartments()?;
-        for x in compartments[0].chars() {
-            if compartments[1].contains(x) {
+        let (lhs, rhs) = self.compartments();
+        for x in lhs.chars() {
+            if rhs.contains(x) {
                 return Ok(x);
             }
         }
@@ -76,6 +68,17 @@ pub fn group_score(group: &[Rucksack]) -> Result<usize, Error> {
         }
     }
     Err(Error::General("failed to find three equal chars in group".to_string()))
+}
+
+#[test]
+fn test_empty_rucksack() {
+    assert_eq!(&""[0..0], "");
+    let r = Rucksack {
+        contents: "".to_string(),
+    };
+    let c = r.compartments();
+    assert_eq!(c.0, "");
+    assert_eq!(c.1, "");
 }
 
 #[test]
