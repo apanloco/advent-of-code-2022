@@ -73,9 +73,7 @@ pub fn group_score(group: &[Rucksack]) -> Result<usize, Error> {
 #[test]
 fn test_empty_rucksack() {
     assert_eq!(&""[0..0], "");
-    let r = Rucksack {
-        contents: "".to_string(),
-    };
+    let r = Rucksack { contents: "".to_string() };
     let c = r.compartments();
     assert_eq!(c.0, "");
     assert_eq!(c.1, "");
