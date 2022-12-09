@@ -1,3 +1,7 @@
+// --- Day 6: Tuning Trouble ---
+// part1: find marker of len 4 in a string
+// part2: find marker of len 14 in a string
+
 use crate::error::Error;
 use std::collections::HashSet;
 use std::hash::Hash;

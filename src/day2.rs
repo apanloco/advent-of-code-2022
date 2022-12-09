@@ -1,3 +1,7 @@
+// --- Day 2: Rock Paper Scissors ---
+// part1: map your shape to specific shape
+// part2: map your shape to specific outcome
+
 use crate::error::Error;
 use std::collections::HashMap;
 

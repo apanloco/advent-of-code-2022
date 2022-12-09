@@ -1,3 +1,7 @@
+// --- Day 5: Supply Stacks ---
+// part1: move one crate from one stack to another
+// part2: move a set of crates from one stack to another
+
 use crate::error::Error;
 
 pub struct Procedure {

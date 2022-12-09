@@ -1,3 +1,7 @@
+// --- Day 8: Treetop Tree House ---
+// part1: Consider your map; how many trees are visible from outside the grid?
+// part2: Consider each tree on your map. What is the highest scenic score possible for any tree?
+
 use crate::error::Error;
 use std::str::FromStr;
 
@@ -9,16 +13,14 @@ pub struct Map {
 impl FromStr for Map {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut map = Vec::new();
-        for (row_index, line) in s.trim_start().trim_end().lines().enumerate() {
-            if map.len() <= row_index {
-                map.push(Vec::new());
-            }
-            for c in line.chars() {
-                map.last_mut().unwrap().push(c as usize - '0' as usize);
-            }
-        }
-        Ok(Map { map })
+        Ok(Map {
+            map: s
+                .trim_start()
+                .trim_end()
+                .lines()
+                .map(|line| line.chars().map(|c| c as usize - '0' as usize).collect())
+                .collect(),
+        })
     }
 }
 
@@ -118,7 +120,6 @@ impl Map {
                     highest_score = score;
                     highest_x = x;
                     highest_y = y;
-                    println!("new highest score at: {} {}", x, y);
                 }
             }
         }

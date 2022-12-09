@@ -1,3 +1,7 @@
+// --- Day 3: Rucksack Reorganization ---
+// part1: find common char in two strings (two halves of a string)
+// part2: find common char in three strings
+
 use crate::error::Error;
 use std::str::FromStr;
 

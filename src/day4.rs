@@ -1,3 +1,7 @@
+// --- Day 4: Camp Cleanup ---
+// part1: does one range fully contain another?
+// part2: does one range overlap another?
+
 use crate::error::Error;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]

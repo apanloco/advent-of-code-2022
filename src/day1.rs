@@ -1,3 +1,7 @@
+// --- Day 1: Calorie Counting ---
+// part1: what elv has the most snacks
+// part2: top 3 elves with the most snacks
+
 use crate::error::Error;
 use std::cmp::Ordering;
 use std::str::FromStr;
