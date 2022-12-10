@@ -24,15 +24,14 @@ pub enum Direction {
     LEFT,
 }
 
-impl FromStr for Direction {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "U" => Direction::UP,
-            "R" => Direction::RIGHT,
-            "D" => Direction::DOWN,
-            "L" => Direction::LEFT,
-            _ => return Err(Error::General(format!("invalid direction: {}", s))),
+impl Direction {
+    fn from_char(c: char) -> Result<Direction, Error> {
+        Ok(match c {
+            'U' => Direction::UP,
+            'R' => Direction::RIGHT,
+            'D' => Direction::DOWN,
+            'L' => Direction::LEFT,
+            _ => return Err(Error::General(format!("invalid direction: {}", c))),
         })
     }
 }
@@ -47,7 +46,7 @@ impl FromStr for Instruction {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Instruction {
-            direction: s[0..1].parse()?,
+            direction: Direction::from_char(s.chars().next().ok_or_else(|| Error::General("empty instruction".to_string()))?)?,
             amount: s[2..].parse()?,
         })
     }
