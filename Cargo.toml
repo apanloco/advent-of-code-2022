@@ -8,3 +8,4 @@ debug = true
 
 [dependencies]
 text_io = "0.1"
+petgraph = "0.6"
