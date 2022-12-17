@@ -21,6 +21,7 @@ impl Valve {
 }
 
 fn dump_valves(valves: &HashMap<String, Valve>) {
+    println!();
     for (k, v) in valves {
         if k != &v.name {
             panic!("internal error!");
@@ -34,48 +35,60 @@ fn dump_valves(valves: &HashMap<String, Valve>) {
     println!();
 }
 
-// fn optimize(mut valves: HashMap<String, Valve>) -> HashMap<String, Valve> {
-//     dump_valves(&valves);
-//     let mut optimized: HashMap<String, Valve> = HashMap::new();
-//     for (k, v1) in valves.iter() {
-//         loop {
-//             let mut changes = false;
-//             println!("optimizing {} {:?}", k, v1);
-//             let mut new_paths = Vec::new();
-//             for x in v1.paths.iter() {
-//                 let v2 = &valves[&x.name];
-//                 if v2.flow_rate == 0 {
-//                     changes = true;
-//                     for p in &v2.paths {
-//                         if &p.name != k {
-//                             new_paths.push(Path {
-//                                 name: p.name.to_string(),
-//                                 cost: p.cost + 1,
-//                             })
-//                         }
-//                     }
-//                 } else {
-//                     new_paths.push(x.clone());
-//                 }
-//                 //println!("new paths: {:?}", &new_paths);
-//             }
-//
-//             if !changes {
-//                 optimized.insert(
-//                     k.to_string(),
-//                     Valve {
-//                         name: k.to_string(),
-//                         flow_rate: v1.flow_rate,
-//                         paths: new_paths,
-//                     },
-//                 );
-//                 break;
-//             }
-//         }
-//     }
-//
-//     optimized
-// }
+fn optimize(valves: HashMap<String, Valve>) -> HashMap<String, Valve> {
+    let mut optimized: HashMap<String, Valve> = HashMap::new();
+    for (key, value) in valves.iter() {
+        //println!("optimizing {} {:?}", key, value);
+        let mut optimized_paths = value.paths.clone();
+        loop {
+            let mut changes = false;
+            let mut new_paths = Vec::new();
+            for old_path in optimized_paths.iter() {
+                let v2 = &valves[&old_path.name];
+                if v2.flow_rate == 0 {
+                    changes = true;
+                    for p in &v2.paths {
+                        if &p.name != key && !new_paths.iter().any(|pp: &Path| pp.name == p.name) {
+                            new_paths.push(Path {
+                                name: p.name.to_string(),
+                                cost: p.cost + old_path.cost,
+                            })
+                        }
+                    }
+                } else {
+                    if new_paths.iter().any(|p: &Path| p.name == old_path.name) {
+                        new_paths.retain(|p| p.name != old_path.name)
+                    }
+                    new_paths.push(old_path.clone());
+                }
+            }
+
+            if new_paths.iter().any(|p| p.cost > 50) {
+                new_paths.retain(|p| p.cost < 20);
+            }
+
+            //println!("2new paths: {:?}", &new_paths);
+
+            if !changes {
+                optimized.insert(
+                    key.to_string(),
+                    Valve {
+                        name: key.to_string(),
+                        flow_rate: value.flow_rate,
+                        paths: new_paths,
+                    },
+                );
+                break;
+            }
+
+            optimized_paths = new_paths;
+        }
+    }
+
+    optimized.retain(|a, b| b.flow_rate > 0 || b.name == "AA");
+
+    optimized
+}
 
 pub fn load_valves(input: &str) -> Result<HashMap<String, Valve>, Error> {
     let mut valves = HashMap::new();
@@ -97,7 +110,9 @@ pub fn load_valves(input: &str) -> Result<HashMap<String, Valve>, Error> {
             .collect();
         valves.insert(name.to_string(), Valve { name, flow_rate, paths });
     }
-    //let valves = optimize(valves);
+    dump_valves(&valves);
+    // let valves = optimize(valves);
+    dump_valves(&valves);
     Ok(valves)
 }
 
@@ -111,17 +126,20 @@ fn recursively_do_something(
     total_pressure_release: i64,
     max_total_pressure_release: &mut i64,
 ) -> Option<(i64, Vec<String>, String)> {
+    if minute > max_minutes {
+        return None;
+    }
+
     if *max_total_pressure_release < total_pressure_release {
         *max_total_pressure_release = total_pressure_release;
         println!("max: {}, actions: {}", max_total_pressure_release, total_actions);
     }
-    // if total_actions.starts_with(
-    //     "|1-move(DD)|2-open(DD)|3-move(CC)|4-move(BB)|5-open(BB)|6-move(AA)|7-move(II)|8-move(JJ)|9-open(JJ)|10-move(II)|11-move(AA)",
-    // ) {
-    //     println!("YES!!");
-    // }
 
-    if opened.len() == 15 {
+    if minute == max_minutes {
+        return Some((total_pressure_release, visited.clone(), total_actions));
+    }
+
+    if opened.len() == valves.len() - 1 {
         // println!("bajs detected (all valves opened, no need to run around)");
         return None;
     }
@@ -138,26 +156,15 @@ fn recursively_do_something(
 
     // println!("{}", &total_actions);
 
-    if minute == max_minutes {
-        return Some((total_pressure_release, visited.clone(), total_actions));
-    }
-
-    if minute > max_minutes {
-        return None;
-    }
-
     let mut results = Vec::new();
     results.push(Some((total_pressure_release, visited.clone(), total_actions.to_string())));
 
     let valve_details = &valves[current_valve_name];
 
     for path in &valve_details.paths {
-        // println!("from {} trying: {:?}", &current_valve_name, &path);
-        // let loop_detection = current_valve_name.to_string() + ">" + &path.name;
-        // if total_path.contains(&loop_detection) {
-        //     // println!("loop detected, skipping");
-        //     continue;
-        // }
+        if path.cost + minute > max_minutes {
+            continue;
+        }
         {
             // open (if possible or necessary)
             if minute < max_minutes && valve_details.flow_rate > 0 && !opened.contains(&current_valve_name) {

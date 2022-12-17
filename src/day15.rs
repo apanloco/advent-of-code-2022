@@ -161,10 +161,10 @@ fn test() -> Result<(), Error> {
     assert_eq!(p, Some((14, 11)));
     assert_eq!(tuning_frequency(p.unwrap()), 56000011);
 
-    // let p = find_distress_beacon(&std::fs::read_to_string("input/day15")?)?;
-    // assert!(p.is_some());
-    // found at (2870615, 2818989) (55.06158740517171%)
-    // assert_eq!(tuning_frequency(p.unwrap()), 11482462818989);
+    let p = find_distress_beacon(&std::fs::read_to_string("input/day15")?)?;
+    assert!(p.is_some());
+    //found at (2870615, 2818989) (55.06158740517171%)
+    assert_eq!(tuning_frequency(p.unwrap()), 11482462818989);
 
     Ok(())
 }
