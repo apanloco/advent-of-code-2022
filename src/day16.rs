@@ -18,12 +18,6 @@ pub struct Valve {
     pub paths: Vec<Path>,
 }
 
-impl Valve {
-    pub fn total_presure_released(&self, minute: i64) -> i64 {
-        self.flow_rate * (30 - minute)
-    }
-}
-
 fn dump_valves(valves: &HashMap<String, Valve>) {
     println!();
     for (k, v) in valves {
@@ -37,6 +31,34 @@ fn dump_valves(valves: &HashMap<String, Valve>) {
         println!();
     }
     println!();
+}
+
+pub fn load_valves(input: &str, do_optimize: bool) -> Result<HashMap<String, Valve>, Error> {
+    let mut valves = HashMap::new();
+    for line in input.trim().lines() {
+        let mut split = line.trim().split(';');
+        let (lhs, rhs) = (split.next().unwrap(), split.next().unwrap());
+        use text_io::try_scan;
+        let name: String;
+        let flow_rate: i64;
+        try_scan!(lhs.bytes() => "Valve {} has flow rate={}", name, flow_rate);
+        let paths: Vec<Path> = rhs
+            .trim_start_matches(" tunnel leads to valve ")
+            .trim_start_matches(" tunnels lead to valves ")
+            .split(',')
+            .map(|p| Path {
+                name: p.trim().to_string(),
+                cost: 1,
+            })
+            .collect();
+        valves.insert(name.to_string(), Valve { name, flow_rate, paths });
+    }
+    if do_optimize {
+        dump_valves(&valves);
+        valves = optimize(valves);
+    }
+    dump_valves(&valves);
+    Ok(valves)
 }
 
 fn optimize(valves: HashMap<String, Valve>) -> HashMap<String, Valve> {
@@ -89,38 +111,12 @@ fn optimize(valves: HashMap<String, Valve>) -> HashMap<String, Valve> {
         }
     }
 
-    optimized.retain(|a, b| b.flow_rate > 0 || b.name == "AA");
+    optimized.retain(|_a, b| b.flow_rate > 0 || b.name == "AA");
 
     optimized
 }
 
-pub fn load_valves(input: &str) -> Result<HashMap<String, Valve>, Error> {
-    let mut valves = HashMap::new();
-    for line in input.trim().lines() {
-        let mut split = line.split(';');
-        let (lhs, rhs) = (split.next().unwrap(), split.next().unwrap());
-        use text_io::try_scan;
-        let name: String;
-        let flow_rate: i64;
-        try_scan!(lhs.bytes() => "Valve {} has flow rate={}", name, flow_rate);
-        let paths: Vec<Path> = rhs
-            .trim_start_matches(" tunnel leads to valve ")
-            .trim_start_matches(" tunnels lead to valves ")
-            .split(',')
-            .map(|p| Path {
-                name: p.trim().to_string(),
-                cost: 1,
-            })
-            .collect();
-        valves.insert(name.to_string(), Valve { name, flow_rate, paths });
-    }
-    dump_valves(&valves);
-    // let valves = optimize(valves);
-    dump_valves(&valves);
-    Ok(valves)
-}
-
-fn recursively_do_something(
+fn recursively_find_max_pressure(
     visited: Vec<String>,
     total_actions: String,
     valves: &HashMap<String, Valve>,
@@ -140,7 +136,7 @@ fn recursively_do_something(
     }
 
     if minute == max_minutes {
-        return Some((total_pressure_release, visited.clone(), total_actions));
+        return Some((total_pressure_release, visited, total_actions));
     }
 
     if opened.len() == valves.len() - 1 {
@@ -166,14 +162,14 @@ fn recursively_do_something(
     let valve_details = &valves[current_valve_name];
 
     for path in &valve_details.paths {
-        if path.cost + minute > max_minutes {
+        if minute > max_minutes {
             continue;
         }
         {
             // open (if possible or necessary)
-            if minute < max_minutes && valve_details.flow_rate > 0 && !opened.contains(&current_valve_name) {
+            if minute < max_minutes && valve_details.flow_rate > 0 && !opened.contains(current_valve_name) {
                 let total_actions = format!("{}|{}-open({})", total_actions, minute, &current_valve_name,);
-                let total_pressure_release = total_pressure_release + valve_details.total_presure_released(minute);
+                let total_pressure_release = total_pressure_release + valve_details.flow_rate * (30 - minute);
                 results.push(Some((total_pressure_release, visited.clone(), total_actions.to_string())));
                 let minute = minute + 1;
                 if minute < max_minutes {
@@ -181,12 +177,12 @@ fn recursively_do_something(
                     opened.push(current_valve_name.to_string());
                     let mut visited = visited.clone();
                     visited.push(path.name.to_string());
-                    let result = recursively_do_something(
+                    let result = recursively_find_max_pressure(
                         visited,
                         format!("{}|{}-move({})", &total_actions, minute, &path.name),
                         valves,
                         opened,
-                        minute + path.cost,
+                        minute + 1,
                         max_minutes,
                         total_pressure_release,
                         max_total_pressure_release,
@@ -203,12 +199,12 @@ fn recursively_do_something(
             // don't open
             let mut visited = visited.clone();
             visited.push(path.name.to_string());
-            let result = recursively_do_something(
+            let result = recursively_find_max_pressure(
                 visited,
                 format!("{}|{}-move({})", &total_actions, minute, &path.name),
                 valves,
                 opened.clone(),
-                minute + path.cost,
+                minute + 1,
                 max_minutes,
                 total_pressure_release,
                 max_total_pressure_release,
@@ -232,7 +228,7 @@ fn recursively_do_something(
 
 pub fn max_pressure(valves: HashMap<String, Valve>, minutes: i64) -> Result<Option<i64>, Error> {
     let mut max_total_pressure_release = 0;
-    let result = recursively_do_something(
+    let result = recursively_find_max_pressure(
         vec!["AA".to_string()],
         "0-start|".to_string(),
         &valves,
@@ -246,27 +242,24 @@ pub fn max_pressure(valves: HashMap<String, Valve>, minutes: i64) -> Result<Opti
     Ok(result.map(|x| x.0))
 }
 
-// |1-move(DD)|2-open(DD)|3-move(CC)|4-move(BB)|5-open(BB)|6-move(AA)|7-move(II)|8-move(JJ)|9-open(JJ)|10-move(II)|11-move(AA)|12-move(DD)
-
-#[test]
-fn test() -> Result<(), Error> {
-    // brute: 5,066549581e+20
-    let input = r#"
-Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
-Valve BB has flow rate=13; tunnels lead to valves CC, AA
-Valve CC has flow rate=2; tunnels lead to valves DD, BB
-Valve DD has flow rate=20; tunnels lead to valves CC, AA, EE
-Valve EE has flow rate=3; tunnels lead to valves FF, DD
-Valve FF has flow rate=0; tunnels lead to valves EE, GG
-Valve GG has flow rate=0; tunnels lead to valves FF, HH
-Valve HH has flow rate=22; tunnel leads to valve GG
-Valve II has flow rate=0; tunnels lead to valves AA, JJ
-Valve JJ has flow rate=21; tunnel leads to valve II"#;
-    let valves = load_valves(input)?;
-    assert_eq!(max_pressure(valves, 30)?, Some(1651));
-
-    // let valves = load_valves(&std::fs::read_to_string("input/day16")?)?;
-    // assert_eq!(max_pressure(valves, 30)?, Some(2359)); // 74 minuter, no optimizations
-
-    Ok(())
-}
+// #[test]
+// fn test() -> Result<(), Error> {
+//     let input = r#"
+// Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
+// Valve BB has flow rate=13; tunnels lead to valves CC, AA
+// Valve CC has flow rate=2; tunnels lead to valves DD, BB
+// Valve DD has flow rate=20; tunnels lead to valves CC, AA, EE
+// Valve EE has flow rate=3; tunnels lead to valves FF, DD
+// Valve FF has flow rate=0; tunnels lead to valves EE, GG
+// Valve GG has flow rate=0; tunnels lead to valves FF, HH
+// Valve HH has flow rate=22; tunnel leads to valve GG
+// Valve II has flow rate=0; tunnels lead to valves AA, JJ
+// Valve JJ has flow rate=21; tunnel leads to valve II"#;
+//     let valves = load_valves(input)?;
+//     assert_eq!(max_pressure(valves, 30)?, Some(1651));
+//
+//     // let valves = load_valves(&std::fs::read_to_string("input/day16")?)?;
+//     // assert_eq!(max_pressure(valves, 30)?, Some(2359)); // 74 minuter, no optimizations
+//
+//     Ok(())
+// }
