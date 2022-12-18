@@ -1,3 +1,7 @@
+// --- Day 17: Pyroclastic Flow ---
+// part1: How many units tall will the tower of rocks be after 2022 rocks have stopped falling?
+// part2: How tall will the tower be after 1000000000000 rocks have stopped?
+
 use crate::error::Error;
 
 type Point = (i64, i64);
@@ -235,10 +239,8 @@ impl Tetris {
 }
 
 pub fn simulate(tetris: &mut Tetris, steps: usize) {
-    println!("start simulation");
     tetris.dump();
     for _step in 0..steps {
-        //println!("new simulation (adjust map height and sprite position)");
         let shape_height = tetris.current_shape.height();
         let current_height = tetris.settled_height();
         let wanted_height = current_height + shape_height as usize + 3;
@@ -248,7 +250,6 @@ pub fn simulate(tetris: &mut Tetris, steps: usize) {
         tetris.current_shape_y = tetris.map.len() as i64 - current_height as i64 - 4;
 
         loop {
-            //println!("show state");
             add_dump_remove(
                 tetris,
                 &tetris.current_shape.clone(),
@@ -259,7 +260,6 @@ pub fn simulate(tetris: &mut Tetris, steps: usize) {
 
             let mut horizontal_move = 0;
             let next_pattern = tetris.patterns.next_pattern();
-            //println!("next: {:?}", next_pattern);
             match next_pattern {
                 Pattern::PushLeft => {
                     if tetris.current_shape_x > 0 {
@@ -283,7 +283,6 @@ pub fn simulate(tetris: &mut Tetris, steps: usize) {
                 tetris.current_shape_x += horizontal_move;
             }
 
-            //println!("moved horizontal {}", horizontal_move);
             add_dump_remove(
                 tetris,
                 &tetris.current_shape.clone(),
@@ -297,7 +296,6 @@ pub fn simulate(tetris: &mut Tetris, steps: usize) {
             if tetris.reached_end(tetris.current_shape_y)
                 || tetris.collides(&tetris.current_shape.clone(), tetris.current_shape_x, tetris.current_shape_y)
             {
-                //println!("settled");
                 tetris.current_shape_y -= 1;
                 tetris.add_shape(
                     &tetris.current_shape.clone(),
@@ -309,7 +307,6 @@ pub fn simulate(tetris: &mut Tetris, steps: usize) {
                 break;
             }
 
-            //println!("moved down");
             add_dump_remove(
                 tetris,
                 &tetris.current_shape.clone(),
@@ -322,80 +319,83 @@ pub fn simulate(tetris: &mut Tetris, steps: usize) {
         tetris.current_shape = tetris.shapes.next_shape().clone();
         tetris.current_shape_y = tetris.current_shape.height() - 1;
         tetris.current_shape_x = 2;
-
-        //println!("dummy println for step debugging");
     }
 }
 
 #[test]
 fn test() -> Result<(), Error> {
     let input = r#">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>"#;
-    // let mut tetris = Tetris::new(Patterns::new(input), Shapes::new());
-    // simulate(&mut tetris, 1);
-    // assert_eq!(tetris.num_rest, 1);
-    // assert_eq!(tetris.settled_height(), 1);
-    // simulate(&mut tetris, 1);
-    // assert_eq!(tetris.num_rest, 2);
-    // assert_eq!(tetris.settled_height(), 4);
-    // simulate(&mut tetris, 1);
-    // assert_eq!(tetris.num_rest, 3);
-    // assert_eq!(tetris.settled_height(), 6);
+    let mut tetris = Tetris::new(Patterns::new(input), Shapes::new());
+    simulate(&mut tetris, 1);
+    assert_eq!(tetris.num_rest, 1);
+    assert_eq!(tetris.settled_height(), 1);
+    simulate(&mut tetris, 1);
+    assert_eq!(tetris.num_rest, 2);
+    assert_eq!(tetris.settled_height(), 4);
+    simulate(&mut tetris, 1);
+    assert_eq!(tetris.num_rest, 3);
+    assert_eq!(tetris.settled_height(), 6);
 
-    // let mut tetris = Tetris::new(Patterns::new(input), Shapes::new());
-    // simulate(&mut tetris, 2022);
-    // assert_eq!(tetris.settled_height(), 3068);
-    //
-    // let mut tetris = Tetris::new(Patterns::new(&std::fs::read_to_string("input/day17")?), Shapes::new());
-    // simulate(&mut tetris, 2022);
-    // assert_eq!(tetris.settled_height(), 3193);
+    let mut tetris = Tetris::new(Patterns::new(input), Shapes::new());
+    simulate(&mut tetris, 2022);
+    assert_eq!(tetris.settled_height(), 3068);
 
     let mut tetris = Tetris::new(Patterns::new(&std::fs::read_to_string("input/day17")?), Shapes::new());
-    simulate(&mut tetris, 1000000);
-    assert_eq!(tetris.settled_height(), 999);
+    simulate(&mut tetris, 2022);
+    assert_eq!(tetris.settled_height(), 3193);
 
-    //assert_eq!(height, 3068);
+    // find patterns:
+    // let mut tetris = Tetris::new(Patterns::new(&std::fs::read_to_string("input/day17")?), Shapes::new());
+    // let mut last_h = 0;
+    // for i in 0..1000000 {
+    //     simulate(&mut tetris, 1);
+    //     let h = tetris.settled_height();
+    //     println!("{}", (h - last_h));
+    //     last_h = h;
+    // }
+
     Ok(())
 }
 
-// #[test]
-// fn test_pattern() -> Result<(), Error> {
-//     let input = r#">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>"#;
-//     let mut patterns: Patterns = Patterns::new(input);
-//     for _ in 0..40 {
-//         patterns.next_pattern();
-//     }
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
-//     assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
-//     Ok(())
-// }
-//
-// #[test]
-// fn test_shapes() -> Result<(), Error> {
-//     let mut shapelist = Shapes::new();
-//     assert_eq!(shapelist.next_shape().shape_type, ShapeType::Minus);
-//     assert_eq!(shapelist.next_shape().shape_type, ShapeType::Plus);
-//     assert_eq!(shapelist.next_shape().shape_type, ShapeType::L);
-//     assert_eq!(shapelist.next_shape().shape_type, ShapeType::I);
-//     assert_eq!(shapelist.next_shape().shape_type, ShapeType::Box);
-//     assert_eq!(shapelist.next_shape().width(), 4);
-//     assert_eq!(shapelist.next_shape().width(), 3);
-//     assert_eq!(shapelist.next_shape().width(), 3);
-//     assert_eq!(shapelist.next_shape().width(), 1);
-//     assert_eq!(shapelist.next_shape().width(), 2);
-//     assert_eq!(shapelist.next_shape().height(), 1);
-//     assert_eq!(shapelist.next_shape().height(), 3);
-//     assert_eq!(shapelist.next_shape().height(), 3);
-//     assert_eq!(shapelist.next_shape().height(), 4);
-//     assert_eq!(shapelist.next_shape().height(), 2);
-//     Ok(())
-// }
+#[test]
+fn test_pattern() -> Result<(), Error> {
+    let input = r#">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>"#;
+    let mut patterns: Patterns = Patterns::new(input);
+    for _ in 0..40 {
+        patterns.next_pattern();
+    }
+    assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushRight);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
+    assert_eq!(patterns.next_pattern(), &Pattern::PushLeft);
+    Ok(())
+}
+
+#[test]
+fn test_shapes() -> Result<(), Error> {
+    let mut shapelist = Shapes::new();
+    assert_eq!(shapelist.next_shape().shape_type, ShapeType::Minus);
+    assert_eq!(shapelist.next_shape().shape_type, ShapeType::Plus);
+    assert_eq!(shapelist.next_shape().shape_type, ShapeType::L);
+    assert_eq!(shapelist.next_shape().shape_type, ShapeType::I);
+    assert_eq!(shapelist.next_shape().shape_type, ShapeType::Box);
+    assert_eq!(shapelist.next_shape().width(), 4);
+    assert_eq!(shapelist.next_shape().width(), 3);
+    assert_eq!(shapelist.next_shape().width(), 3);
+    assert_eq!(shapelist.next_shape().width(), 1);
+    assert_eq!(shapelist.next_shape().width(), 2);
+    assert_eq!(shapelist.next_shape().height(), 1);
+    assert_eq!(shapelist.next_shape().height(), 3);
+    assert_eq!(shapelist.next_shape().height(), 3);
+    assert_eq!(shapelist.next_shape().height(), 4);
+    assert_eq!(shapelist.next_shape().height(), 2);
+    Ok(())
+}

@@ -1,3 +1,7 @@
+// --- Day 16: Proboscidea Volcanium ---
+// part1: Work out the steps to release the most pressure in 30 minutes. What is the most pressure you can release?
+// part2: With you and an elephant working together for 26 minutes, what is the most pressure you could release?
+
 use crate::error::Error;
 use std::collections::HashMap;
 
