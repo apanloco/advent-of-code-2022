@@ -8,7 +8,6 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct Path {
     pub name: String,
-    pub cost: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -18,22 +17,7 @@ pub struct Valve {
     pub paths: Vec<Path>,
 }
 
-fn dump_valves(valves: &HashMap<String, Valve>) {
-    println!();
-    for (k, v) in valves {
-        if k != &v.name {
-            panic!("internal error!");
-        }
-        print!("Valve {} has flow rate={}; tunnels lead to valves ", k, v.flow_rate);
-        for p in &v.paths {
-            print!("{}({}) ", p.name, p.cost);
-        }
-        println!();
-    }
-    println!();
-}
-
-pub fn load_valves(input: &str, do_optimize: bool) -> Result<HashMap<String, Valve>, Error> {
+pub fn load_valves(input: &str) -> Result<HashMap<String, Valve>, Error> {
     let mut valves = HashMap::new();
     for line in input.trim().lines() {
         let mut split = line.trim().split(';');
@@ -48,72 +32,11 @@ pub fn load_valves(input: &str, do_optimize: bool) -> Result<HashMap<String, Val
             .split(',')
             .map(|p| Path {
                 name: p.trim().to_string(),
-                cost: 1,
             })
             .collect();
         valves.insert(name.to_string(), Valve { name, flow_rate, paths });
     }
-    if do_optimize {
-        dump_valves(&valves);
-        valves = optimize(valves);
-    }
-    dump_valves(&valves);
     Ok(valves)
-}
-
-fn optimize(valves: HashMap<String, Valve>) -> HashMap<String, Valve> {
-    let mut optimized: HashMap<String, Valve> = HashMap::new();
-    for (key, value) in valves.iter() {
-        //println!("optimizing {} {:?}", key, value);
-        let mut optimized_paths = value.paths.clone();
-        loop {
-            let mut changes = false;
-            let mut new_paths = Vec::new();
-            for old_path in optimized_paths.iter() {
-                let v2 = &valves[&old_path.name];
-                if v2.flow_rate == 0 {
-                    changes = true;
-                    for p in &v2.paths {
-                        if &p.name != key && !new_paths.iter().any(|pp: &Path| pp.name == p.name) {
-                            new_paths.push(Path {
-                                name: p.name.to_string(),
-                                cost: p.cost + old_path.cost,
-                            })
-                        }
-                    }
-                } else {
-                    if new_paths.iter().any(|p: &Path| p.name == old_path.name) {
-                        new_paths.retain(|p| p.name != old_path.name)
-                    }
-                    new_paths.push(old_path.clone());
-                }
-            }
-
-            if new_paths.iter().any(|p| p.cost > 50) {
-                new_paths.retain(|p| p.cost < 20);
-            }
-
-            //println!("2new paths: {:?}", &new_paths);
-
-            if !changes {
-                optimized.insert(
-                    key.to_string(),
-                    Valve {
-                        name: key.to_string(),
-                        flow_rate: value.flow_rate,
-                        paths: new_paths,
-                    },
-                );
-                break;
-            }
-
-            optimized_paths = new_paths;
-        }
-    }
-
-    optimized.retain(|_a, b| b.flow_rate > 0 || b.name == "AA");
-
-    optimized
 }
 
 fn recursively_find_max_pressure(
