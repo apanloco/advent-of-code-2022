@@ -3,6 +3,7 @@
 // part2: (more iterations) What do you get if you multiply these numbers together?
 
 use crate::error::Error;
+use bitflags::bitflags;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use text_io::try_scan;
@@ -47,6 +48,16 @@ pub fn load_blueprint(s: &str) -> Result<Blueprint, Error> {
     })
 }
 
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct TypeFlags: u32 {
+        const ORE      = 0b00000001;
+        const CLAY     = 0b00000010;
+        const OBSIDIAN = 0b00000100;
+        const GEODE    = 0b00001000;
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct State {
     pub num_ore_robots: usize,
@@ -59,22 +70,10 @@ pub struct State {
     pub num_obsidian: usize,
     pub num_geode: usize,
 
-    pub can_buy_ore_robot: bool,
-    pub can_buy_clay_robot: bool,
-    pub can_buy_obsidian_robot: bool,
-    pub can_buy_geode_robot: bool,
-    pub bought_ore_robot: bool,
-    pub bought_clay_robot: bool,
-    pub bought_obsidian_robot: bool,
-    pub bought_geode_robot: bool,
+    pub can_buy: TypeFlags,
+    pub bought: TypeFlags,
 
     pub minute: usize,
-}
-
-impl State {
-    pub fn bought_nothing(&self) -> bool {
-        !self.bought_ore_robot && !self.bought_clay_robot && !self.bought_obsidian_robot && !self.bought_geode_robot
-    }
 }
 
 pub fn simulate(blueprint: &Blueprint, end_time: usize) -> usize {
@@ -87,14 +86,8 @@ pub fn simulate(blueprint: &Blueprint, end_time: usize) -> usize {
         num_clay: 0,
         num_obsidian: 0,
         num_geode: 0,
-        can_buy_ore_robot: false,
-        can_buy_clay_robot: false,
-        can_buy_obsidian_robot: false,
-        can_buy_geode_robot: false,
-        bought_ore_robot: false,
-        bought_clay_robot: false,
-        bought_obsidian_robot: false,
-        bought_geode_robot: false,
+        can_buy: TypeFlags::empty(),
+        bought: TypeFlags::empty(),
         minute: 1,
     };
 
@@ -122,14 +115,31 @@ pub fn simulate(blueprint: &Blueprint, end_time: usize) -> usize {
             continue;
         }
 
-        let can_buy_ore_robot = current_state.num_ore >= blueprint.cost_ore_robot_ore;
-        let can_buy_clay_robot = current_state.num_ore >= blueprint.cost_clay_robot_ore;
+        let can_buy_ore_robot = if current_state.num_ore >= blueprint.cost_ore_robot_ore {
+            TypeFlags::ORE
+        } else {
+            TypeFlags::empty()
+        };
+        let can_buy_clay_robot = if current_state.num_ore >= blueprint.cost_clay_robot_ore {
+            TypeFlags::CLAY
+        } else {
+            TypeFlags::empty()
+        };
         let can_buy_obsidian_robot =
-            current_state.num_ore >= blueprint.cost_obsidian_robot_ore && current_state.num_clay >= blueprint.cost_obsidian_robot_clay;
-        let can_buy_geode_robot =
-            current_state.num_ore >= blueprint.cost_geode_robot_ore && current_state.num_obsidian >= blueprint.cost_geode_robot_obsidian;
+            if current_state.num_ore >= blueprint.cost_obsidian_robot_ore && current_state.num_clay >= blueprint.cost_obsidian_robot_clay {
+                TypeFlags::OBSIDIAN
+            } else {
+                TypeFlags::empty()
+            };
+        let can_buy_geode_robot = if current_state.num_ore >= blueprint.cost_geode_robot_ore
+            && current_state.num_obsidian >= blueprint.cost_geode_robot_obsidian
+        {
+            TypeFlags::GEODE
+        } else {
+            TypeFlags::empty()
+        };
 
-        if can_buy_ore_robot && !(current_state.can_buy_ore_robot && current_state.bought_nothing()) {
+        if can_buy_ore_robot == TypeFlags::ORE && !(current_state.can_buy.contains(TypeFlags::ORE) && current_state.bought.is_empty()) {
             states.push(State {
                 num_ore_robots: current_state.num_ore_robots + 1,
                 num_clay_robots: current_state.num_clay_robots,
@@ -139,19 +149,13 @@ pub fn simulate(blueprint: &Blueprint, end_time: usize) -> usize {
                 num_clay: current_state.num_clay + current_state.num_clay_robots,
                 num_obsidian: current_state.num_obsidian + current_state.num_obsidian_robots,
                 num_geode: current_state.num_geode + current_state.num_geode_robots,
-                can_buy_ore_robot,
-                can_buy_clay_robot,
-                can_buy_obsidian_robot,
-                can_buy_geode_robot,
-                bought_ore_robot: true,
-                bought_clay_robot: false,
-                bought_obsidian_robot: false,
-                bought_geode_robot: false,
+                can_buy: can_buy_ore_robot | can_buy_clay_robot | can_buy_obsidian_robot | can_buy_geode_robot,
+                bought: TypeFlags::ORE,
                 minute: current_state.minute + 1,
             });
         }
 
-        if can_buy_clay_robot && !(current_state.can_buy_clay_robot && current_state.bought_nothing()) {
+        if can_buy_clay_robot == TypeFlags::CLAY && !(current_state.can_buy.contains(TypeFlags::CLAY) && current_state.bought.is_empty()) {
             states.push(State {
                 num_ore_robots: current_state.num_ore_robots,
                 num_clay_robots: current_state.num_clay_robots + 1,
@@ -161,19 +165,15 @@ pub fn simulate(blueprint: &Blueprint, end_time: usize) -> usize {
                 num_clay: current_state.num_clay + current_state.num_clay_robots,
                 num_obsidian: current_state.num_obsidian + current_state.num_obsidian_robots,
                 num_geode: current_state.num_geode + current_state.num_geode_robots,
-                can_buy_ore_robot,
-                can_buy_clay_robot,
-                can_buy_obsidian_robot,
-                can_buy_geode_robot,
-                bought_ore_robot: false,
-                bought_clay_robot: true,
-                bought_obsidian_robot: false,
-                bought_geode_robot: false,
+                can_buy: can_buy_ore_robot | can_buy_clay_robot | can_buy_obsidian_robot | can_buy_geode_robot,
+                bought: TypeFlags::CLAY,
                 minute: current_state.minute + 1,
             });
         }
 
-        if can_buy_obsidian_robot && !(current_state.can_buy_obsidian_robot && current_state.bought_nothing()) {
+        if can_buy_obsidian_robot == TypeFlags::OBSIDIAN
+            && !(current_state.can_buy.contains(TypeFlags::OBSIDIAN) && current_state.bought.is_empty())
+        {
             states.push(State {
                 num_ore_robots: current_state.num_ore_robots,
                 num_clay_robots: current_state.num_clay_robots,
@@ -183,19 +183,14 @@ pub fn simulate(blueprint: &Blueprint, end_time: usize) -> usize {
                 num_clay: current_state.num_clay + current_state.num_clay_robots - blueprint.cost_obsidian_robot_clay,
                 num_obsidian: current_state.num_obsidian + current_state.num_obsidian_robots,
                 num_geode: current_state.num_geode + current_state.num_geode_robots,
-                can_buy_ore_robot,
-                can_buy_clay_robot,
-                can_buy_obsidian_robot,
-                can_buy_geode_robot,
-                bought_ore_robot: false,
-                bought_clay_robot: false,
-                bought_obsidian_robot: true,
-                bought_geode_robot: false,
+                can_buy: can_buy_ore_robot | can_buy_clay_robot | can_buy_obsidian_robot | can_buy_geode_robot,
+                bought: TypeFlags::OBSIDIAN,
                 minute: current_state.minute + 1,
             });
         }
 
-        if can_buy_geode_robot && !(current_state.can_buy_geode_robot && current_state.bought_nothing()) {
+        if can_buy_geode_robot == TypeFlags::GEODE && !(current_state.can_buy.contains(TypeFlags::GEODE) && current_state.bought.is_empty())
+        {
             states.push(State {
                 num_ore_robots: current_state.num_ore_robots,
                 num_clay_robots: current_state.num_clay_robots,
@@ -205,19 +200,13 @@ pub fn simulate(blueprint: &Blueprint, end_time: usize) -> usize {
                 num_clay: current_state.num_clay + current_state.num_clay_robots,
                 num_obsidian: current_state.num_obsidian + current_state.num_obsidian_robots - blueprint.cost_geode_robot_obsidian,
                 num_geode: current_state.num_geode + current_state.num_geode_robots,
-                can_buy_ore_robot,
-                can_buy_clay_robot,
-                can_buy_obsidian_robot,
-                can_buy_geode_robot,
-                bought_ore_robot: false,
-                bought_clay_robot: false,
-                bought_obsidian_robot: false,
-                bought_geode_robot: true,
+                can_buy: can_buy_ore_robot | can_buy_clay_robot | can_buy_obsidian_robot | can_buy_geode_robot,
+                bought: TypeFlags::GEODE,
                 minute: current_state.minute + 1,
             });
         }
 
-        if !can_buy_ore_robot || !can_buy_clay_robot || !can_buy_obsidian_robot || !can_buy_geode_robot {
+        if !((can_buy_ore_robot | can_buy_clay_robot | can_buy_obsidian_robot | can_buy_geode_robot).is_all()) {
             states.push(State {
                 num_ore_robots: current_state.num_ore_robots,
                 num_clay_robots: current_state.num_clay_robots,
@@ -227,14 +216,8 @@ pub fn simulate(blueprint: &Blueprint, end_time: usize) -> usize {
                 num_clay: current_state.num_clay + current_state.num_clay_robots,
                 num_obsidian: current_state.num_obsidian + current_state.num_obsidian_robots,
                 num_geode: current_state.num_geode + current_state.num_geode_robots,
-                can_buy_ore_robot,
-                can_buy_clay_robot,
-                can_buy_obsidian_robot,
-                can_buy_geode_robot,
-                bought_ore_robot: false,
-                bought_clay_robot: false,
-                bought_obsidian_robot: false,
-                bought_geode_robot: false,
+                can_buy: can_buy_ore_robot | can_buy_clay_robot | can_buy_obsidian_robot | can_buy_geode_robot,
+                bought: TypeFlags::empty(),
                 minute: current_state.minute + 1,
             });
         }
@@ -258,6 +241,13 @@ fn test() -> Result<(), Error> {
     // let blueprint2 = load_blueprint(input)?;
     // assert_eq!(simulate_multi(&[blueprint1.clone(), blueprint2.clone()], 25), vec![9, 12]);
     // assert_eq!(simulate_multi(&[blueprint1.clone(), blueprint2.clone()], 33), vec![56, 62]);
+
+    assert_eq!(
+        TypeFlags::CLAY | TypeFlags::ORE | TypeFlags::OBSIDIAN | TypeFlags::GEODE,
+        TypeFlags::all()
+    );
+
+    assert_eq!(80, std::mem::size_of::<State>());
 
     let blueprints = std::fs::read_to_string("input/day19")?
         .lines()
